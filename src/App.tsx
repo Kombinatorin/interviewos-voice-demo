@@ -1,6 +1,10 @@
 import React, { useState } from "react";
 import VoiceDemo from "./VoiceDemo";
+import LandingPage from "./pages/LandingPage";
 
+export default function App() {
+  return <LandingPage />;
+}
 const App: React.FC = () => {
   const [started, setStarted] = useState(false);
 
