@@ -1,3 +1,4 @@
+console.log("App booted");
 import { useState } from "react";
 import LandingPage from "./pages/LandingPage";
 import TopicSelectionPage from "./pages/TopicSelectionPage";
