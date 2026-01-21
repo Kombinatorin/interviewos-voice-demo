@@ -15,7 +15,7 @@ const LandingPage: React.FC = () => {
         <h1 className="hero-title">InterviewOS</h1>
 
         <p className="hero-subtitle">
-          Ein neues Betriebssystem für Interviews, Dialoge und KI-Agenten.
+          Ein Betriebssystem für Interviews, KI-Agenten und intelligente Entscheidungsprozesse.
           <br />
           Ruhig. Intelligent. Menschlich.
         </p>
