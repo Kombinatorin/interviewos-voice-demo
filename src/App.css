@@ -13,13 +13,18 @@ html, body {
   width: 100vw;
   display: flex;
   align-items: center;
-  justify-content: flex-start; /* ⬅ wichtig */
+  justify-content: center;
+
   background:
-    radial-gradient(1200px 600px at 35% 40%, rgba(99,102,241,0.18), transparent),
-    linear-gradient(180deg, #06070a 0%, #020204 100%);
+    radial-gradient(
+      1000px 600px at 50% 40%,
+      rgba(99, 102, 241, 0.22),
+      transparent 70%
+    ),
+    linear-gradient(180deg, #05060a 0%, #020204 100%);
+
   overflow: hidden;
 }
-
 /* ===== Hero ===== */
 .hero {
   text-align: center;
