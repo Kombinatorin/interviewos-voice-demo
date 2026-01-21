@@ -9,7 +9,11 @@ export default function App() {
   const [page, setPage] = useState<Page>("landing");
 
   if (page === "landing") {
-    return <LandingPage onDiscover={() => setPage("topics")} />;
+    return (
+      <LandingPage
+        onDiscover={() => setPage("topics")}
+      />
+    );
   }
 
   if (page === "topics") {
