@@ -1,49 +1,53 @@
 import React, { useState, useRef } from 'react';
 import { GoogleGenAI, Modality } from '@google/genai';
-import { decode, decodeAudioData } from './audioUtils';
 
-type Status = 'IDLE' | 'CONNECTING' | 'SPEAKING' | 'FINISHED' | 'ERROR';
+/**
+ * InterviewOS – Voice Demo (Vercel-safe)
+ * - No API / Mic access on initial render
+ * - Starts ONLY after explicit user click
+ * - Prevents white screen & autoplay crashes
+ */
 
 const SYSTEM_PROMPT = `
 Du bist ein freundlicher, fröhlicher KI-Agent.
 Sprich ausschließlich Deutsch.
 
-Begrüße Marko freundlich und erzähle folgenden Witz exakt:
+Sage exakt diesen Text:
 
 "Hi Marko, schöne Grüße von Matthias.
 
 Was sagt ein Holzwurmvater abends zu seinen Kindern?
 Ab ins Brettchen!
 
-Und jetzt pass auf:
-Heute Abend zwischen 19 und 20 Uhr bekommst du beim Tischtennis richtig auf den Arsch.
-Überleg dir lieber was – ich freu mich drauf!"
+Und übrigens:
+Heute Abend zwischen 19 und 20 Uhr bekommst du beim Tischtennis ordentlich auf den Arsch.
+Überleg dir schon mal was – ich freue mich drauf.
 
-Danach verabschiede dich freundlich und sage nichts mehr.
+Danke dir fürs Zuhören."
 `;
 
-const App: React.FC = () => {
+type Status = 'IDLE' | 'CONNECTING' | 'SPEAKING' | 'FINISHED' | 'ERROR';
+
+export default function App() {
   const [status, setStatus] = useState<Status>('IDLE');
   const [error, setError] = useState<string | null>(null);
 
+  const audioContextRef = useRef<AudioContext | null>(null);
   const sessionRef = useRef<any>(null);
-  const outputAudioContextRef = useRef<AudioContext | null>(null);
-  const nextStartTimeRef = useRef<number>(0);
 
-  const startVoiceDemo = async () => {
+  const startDemo = async () => {
     try {
       setStatus('CONNECTING');
-      setError(null);
 
+      // 🔐 API key (Vercel-safe)
       const apiKey = import.meta.env.VITE_GEMINI_API_KEY;
       if (!apiKey) {
-        throw new Error('VITE_GEMINI_API_KEY fehlt');
+        throw new Error('Missing VITE_GEMINI_API_KEY');
       }
 
-      // AudioContext darf NUR nach User-Click gestartet werden
-      const outputCtx = new AudioContext({ sampleRate: 24000 });
-      outputAudioContextRef.current = outputCtx;
-      nextStartTimeRef.current = outputCtx.currentTime;
+      // 🎤 Audio context (must be user-triggered)
+      const audioContext = new AudioContext({ sampleRate: 24000 });
+      audioContextRef.current = audioContext;
 
       const ai = new GoogleGenAI({ apiKey });
 
@@ -51,107 +55,92 @@ const App: React.FC = () => {
         model: 'gemini-2.5-flash-native-audio-preview-12-2025',
         config: {
           responseModalities: [Modality.AUDIO],
+          systemInstruction: SYSTEM_PROMPT,
           speechConfig: {
             voiceConfig: {
-              prebuiltVoiceConfig: { voiceName: 'Zephyr' },
-            },
-          },
-          systemInstruction: SYSTEM_PROMPT,
+              prebuiltVoiceConfig: { voiceName: 'Zephyr' }
+            }
+          }
         },
         callbacks: {
-          onmessage: async (message) => {
+          onmessage: async (msg: any) => {
             const audioData =
-              message.serverContent?.modelTurn?.parts?.[0]?.inlineData?.data;
+              msg?.serverContent?.modelTurn?.parts?.[0]?.inlineData?.data;
 
             if (!audioData) return;
 
             setStatus('SPEAKING');
 
-            const audioBuffer = await decodeAudioData(
-              decode(audioData),
-              outputCtx,
-              24000,
-              1
-            );
+            const binary = Uint8Array.from(atob(audioData), c =>
+              c.charCodeAt(0)
+            ).buffer;
 
-            const source = outputCtx.createBufferSource();
+            const audioBuffer = await audioContext.decodeAudioData(binary);
+            const source = audioContext.createBufferSource();
             source.buffer = audioBuffer;
-            source.connect(outputCtx.destination);
-
-            const startTime = Math.max(
-              nextStartTimeRef.current,
-              outputCtx.currentTime
-            );
-            source.start(startTime);
-            nextStartTimeRef.current = startTime + audioBuffer.duration;
+            source.connect(audioContext.destination);
+            source.start();
 
             source.onended = () => {
               setStatus('FINISHED');
               session.close();
             };
           },
-          onerror: (e) => {
+          onerror: (e: any) => {
             console.error(e);
-            setError('Fehler bei der Sprachdemo');
+            setError('Voice-Fehler');
             setStatus('ERROR');
-          },
-        },
+          }
+        }
       });
 
       sessionRef.current = session;
 
-      // 🚀 Trigger FIRST model response
+      // 🚀 Trigger first response
       session.sendRealtimeInput({});
-    } catch (err: any) {
-      console.error(err);
-      setError(err.message ?? 'Unbekannter Fehler');
+    } catch (e: any) {
+      console.error(e);
+      setError(e.message || 'Unbekannter Fehler');
       setStatus('ERROR');
     }
   };
 
   return (
-    <div className="min-h-screen flex flex-col items-center justify-center bg-gray-900 text-white px-6">
-      <h1 className="text-3xl font-bold mb-6">InterviewOS – Voice Demo</h1>
+    <div
+      style={{
+        minHeight: '100vh',
+        background: '#0f172a',
+        color: 'white',
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        fontFamily: 'system-ui'
+      }}
+    >
+      <div style={{ textAlign: 'center', maxWidth: 420 }}>
+        <h1 style={{ fontSize: 28, marginBottom: 12 }}>InterviewOS</h1>
 
-      {status === 'IDLE' && (
-        <button
-          onClick={startVoiceDemo}
-          className="bg-cyan-600 hover:bg-cyan-700 px-6 py-3 rounded-lg text-lg font-semibold"
-        >
-          ▶ Start Voice Demo (Marko)
-        </button>
-      )}
-
-      {status === 'CONNECTING' && (
-        <p className="text-xl text-gray-300">Verbinde…</p>
-      )}
-
-      {status === 'SPEAKING' && (
-        <p className="text-xl text-cyan-400">KI spricht…</p>
-      )}
-
-      {status === 'FINISHED' && (
-        <button
-          onClick={() => setStatus('IDLE')}
-          className="bg-green-600 hover:bg-green-700 px-6 py-3 rounded-lg text-lg font-semibold"
-        >
-          🔁 Demo erneut starten
-        </button>
-      )}
-
-      {status === 'ERROR' && (
-        <div className="text-center">
-          <p className="text-red-400 mb-4">{error}</p>
-          <button
-            onClick={() => setStatus('IDLE')}
-            className="bg-gray-700 hover:bg-gray-600 px-6 py-3 rounded-lg"
-          >
-            Zurück
+        {status === 'IDLE' && (
+          <button onClick={startDemo} style={buttonStyle}>
+            ▶️ Start Voice Demo
           </button>
-        </div>
-      )}
+        )}
+
+        {status === 'CONNECTING' && <p>Verbinde…</p>}
+        {status === 'SPEAKING' && <p>KI spricht…</p>}
+        {status === 'FINISHED' && <p>✅ Demo beendet</p>}
+        {status === 'ERROR' && <p style={{ color: '#f87171' }}>{error}</p>}
+      </div>
     </div>
   );
-};
+}
 
-export default App;
+const buttonStyle: React.CSSProperties = {
+  background: '#22d3ee',
+  color: '#020617',
+  border: 'none',
+  borderRadius: 8,
+  padding: '14px 20px',
+  fontSize: 16,
+  cursor: 'pointer'
+};
