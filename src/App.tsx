@@ -1,5 +1,8 @@
+import React from "react";
 import LandingPage from "./LandingPage";
 
-export default function App() {
+const App: React.FC = () => {
   return <LandingPage />;
-}
+};
+
+export default App;
