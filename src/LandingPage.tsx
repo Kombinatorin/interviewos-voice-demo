@@ -1,8 +1,5 @@
 import AnimatedButton from "../components/AnimatedButton";
 
-type Props = {
-  onDiscover: () => void;
-};
 
 export default function LandingPage({ onDiscover }: Props) {
   return (
