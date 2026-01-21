@@ -1,5 +1,5 @@
-import { ReactNode, useEffect, useState } from "react";
-
+import { useEffect, useState } from "react";
+import type { ReactNode } from "react";
 export default function PageTransition({ children }: { children: ReactNode }) {
   const [visible, setVisible] = useState(false);
 
